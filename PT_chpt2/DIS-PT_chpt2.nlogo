@@ -138,7 +138,7 @@ to setup
   create-citizens num-citizens [
     set label who
     set shape "person"
-    set size 1.5
+    set size 2.5
     set color green
     setxy random-xcor random-ycor
     ; make sure the agents are not placed in prison already during setup:
