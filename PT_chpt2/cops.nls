@@ -10,7 +10,6 @@
 ;---------------------------------------------------
 
 to cop_behavior
-  ifelse eating? = false [
   ; check if citizen is nearby to arrest
   let suspect one-of citizens-here with [inPrison? = false] ; need to make sure the citizen is not in jail, otherwise can the cop be trapped besides
     ifelse suspect != nobody [
@@ -25,20 +24,9 @@ to cop_behavior
      set suspect one-of other citizens with [inPrison? = false] in-radius cop-vision
      if suspect != nobody [
         print (word " cop-agent: " who " sees suspect: " suspect)
-        set energy energy - 3
         face suspect  
     ]
     forward cop-speed ; move forward towards suspect
-    set energy energy - 1
-  ]
-  if energy <= 0 [
-    set eating? true
-    move-to one-of patches with [not any? turtles-here and region = "diner"]
-  ]
-  ]
-  [set energy energy + 2
-    if energy >= 100 [set eating? false]
   ]
 end
 
-  

@@ -107,8 +107,6 @@ citizens-own [
 cops-own [
   ;cop-vision is set by slider
   cop-speed
-  energy
-  eating?
 ]
 
 
@@ -120,7 +118,6 @@ to setup
   clear-all
   ; define global variables that are not set as sliders
   set max-jailterm 51
-
 
 
   ; setup of the environment:
@@ -139,14 +136,6 @@ to setup
     ]
     ask one-of prisonpatches [set plabel "PRISON"]
 
-  ; setup diner
-  let dinerpatches patches with [ pxcor >= -35  and pxcor <= -20 and pycor >= -5 and pycor <= 15 ]
-    ask dinerpatches [
-      set pcolor pink
-      set region "diner"
-    ]
-    ask one-of dinerpatches [set plabel "DINER"]
-
 
   ; setup citizen-agents
   create-citizens num-citizens [
@@ -156,7 +145,7 @@ to setup
     set color green
     setxy random-xcor random-ycor
     ; make sure the agents are not placed in prison already during setup:
-    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "diner"]
+    move-to one-of patches with [ not any? turtles-here and region != "prison"]
     ; setting specific variables for citizen
     set inPrison? false
     set jailtime 0
@@ -170,8 +159,6 @@ to setup
     set shape "person police"
     set size 2
     set color blue
-    set energy 100
-    set eating? false
     set cop-speed random 3 + 1 ; make sure it cannot be 0
     move-to one-of patches with [ not any? turtles-here and region != "prison"]
   ]
@@ -223,13 +210,13 @@ to go
 end ; - to go part
 @#$#@#$#@
 GRAPHICS-WINDOW
-259
-13
-1428
-607
+331
+17
+881
+568
 -1
 -1
-8.7313433
+8.1
 1
 10
 1
@@ -239,8 +226,6 @@ GRAPHICS-WINDOW
 1
 1
 1
--66
-66
 -33
 33
 -33
