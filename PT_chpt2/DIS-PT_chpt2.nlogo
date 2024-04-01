@@ -206,8 +206,8 @@ to go
   ask turtles [
     ; Reactive part based on the type of agent
     if (breed = citizens) [
-      ;citizen_state_machine
-      citizen_behavior ; code as defined in the include-file "citizens.nls"
+      citizen_state_machine
+      ;citizen_behavior ; code as defined in the include-file "citizens.nls"
       ]
     if (breed = cops) [
       cop_behavior ; code as defined in the include-file "cops.nls"
