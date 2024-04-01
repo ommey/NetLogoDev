@@ -100,6 +100,8 @@ citizens-own [
   inPrison?
   jailtime
   jailsentence
+  nearestCop
+  state ; state variable for keeping track of current state
 ]
 ;---- Specific, local variables of cop-agents
 cops-own [
@@ -191,6 +193,7 @@ to go
   ask turtles [
     ; Reactive part based on the type of agent
     if (breed = citizens) [
+      ;citizen_state_machine
       citizen_behavior ; code as defined in the include-file "citizens.nls"
       ]
     if (breed = cops) [
@@ -207,13 +210,13 @@ to go
 end ; - to go part
 @#$#@#$#@
 GRAPHICS-WINDOW
-549
+583
 10
-2887
-1193
+1137
+565
 -1
 -1
-17.5224
+8.15
 1
 10
 1
@@ -223,36 +226,36 @@ GRAPHICS-WINDOW
 1
 1
 1
-0
-132
-0
-66
-0
-0
+-33
+33
+-33
+33
+1
+1
 1
 ticks
 30.0
 
 SLIDER
-23
-397
-137
-430
+260
+41
+374
+74
 num-citizens
 num-citizens
 1
 30
-19.0
+15.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-22
-24
-85
-57
+180
+42
+243
+75
 setup
 setup
 NIL
@@ -266,10 +269,10 @@ NIL
 1
 
 BUTTON
-21
-73
-84
-106
+179
+91
+242
+124
 go
 go
 T
@@ -283,55 +286,55 @@ NIL
 1
 
 SLIDER
-23
-437
-136
-470
+260
+81
+373
+114
 num-cops
 num-cops
 0
 50
-4.0
+6.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-156
-398
-248
-431
+393
+42
+485
+75
 citizen-vision
 citizen-vision
 1
 10
-3.0
+1.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-156
-436
-248
-469
+393
+80
+485
+113
 cop-vision
 cop-vision
 1
 10
-3.0
+10.0
 0.1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-21
-500
-109
-533
+258
+144
+346
+177
 start recorder
 start-recorder
 NIL
@@ -345,10 +348,10 @@ NIL
 1
 
 BUTTON
-19
-542
-108
-575
+256
+186
+345
+219
 reset recorder
 reset-recorder
 NIL
@@ -362,10 +365,10 @@ NIL
 1
 
 BUTTON
-18
-584
-107
-617
+255
+228
+344
+261
 save recording
 save-recording
 NIL
@@ -379,10 +382,10 @@ NIL
 1
 
 MONITOR
-124
-503
-244
-548
+361
+147
+481
+192
 NIL
 vid:recorder-status
 3
@@ -390,20 +393,20 @@ vid:recorder-status
 11
 
 CHOOSER
-124
-559
-243
-604
+361
+203
+480
+248
 Source
 Source
 "Only View" "With Interface"
 0
 
 TEXTBOX
-18
-468
-253
-496
+256
+259
+491
+319
 _______________________________________
 11
 0.0
