@@ -9,6 +9,60 @@
 
 
 
+to running_away_from_cops
+  
+    set heading (towards nearestCop) + 180 ; face opposite from the nearest police
+    print (word " citizen: " who " evaded cop: " nearestCop)
+    
+    set state "moving_around_freely"
+  
+end
+  
+to in_prison
+  set jailtime jailtime + 1
+  print (word "citizen " who "is in prison since: " jailtime)
+  if jailtime > jailsentence [
+    set jailtime 0
+    let places neighborhood with [not any? cops-here and region != "prison"]
+    if any? places [move-to one-of places]
+    set inPrison? false
+    set color yellow
+    set state "moving_around_freely"
+    print (word "citizen " who "is released from prison")
+  ]
+  
+end
+
+
+to moving_around_freely
+  let nearby-police other cops in-radius citizen-vision
+    if any? nearby-police [let police min-one-of nearby-police [distance myself]; identify the cop that is nearest
+    if police != nobody [
+    print (word " citizen: " who " sees cop: " police)
+    set nearestCop police
+    set state "running_away_from_cops"
+
+  ]
+       
+    
+    ]    
+    ; move forward where there are no cops and is not prison
+    let places neighborhood with [not any? cops-here and region != "prison"]
+    if any? places [move-to one-of places]
+  
+  
+end
+
+to citizen_state_machine
+  if state = "moving_around_freely"[
+    moving_around_freely
+  ] if state = "running_away_from_cops"[
+    running_away_from_cops
+  ] if state = "in_prison"[
+    in_prison
+  ]
+end
+
 to citizen_behavior
   
 ; checking if the citizen is in prison
@@ -18,7 +72,7 @@ ifelse inPrison? = true [
     if jailtime > jailsentence [; released from prison
       set jailtime 0
       ; move forward where there are no cops and is not prison
-      let places neighborhood with [not any? cops-here and region != "prison" and region != "diner"]
+      let places neighborhood with [not any? cops-here and region != "prison"]
       if any? places [move-to one-of places]
       set inPrison? false
       set color yellow
@@ -35,7 +89,7 @@ ifelse inPrison? = true [
       ] 
     ]    
     ; move forward where there are no cops and is not prison
-    let places neighborhood with [not any? cops-here and region != "prison" and region != "diner"]
+    let places neighborhood with [not any? cops-here and region != "prison"]
     if any? places [move-to one-of places]
   ]
 end
@@ -44,6 +98,7 @@ end
 to gotoprison 
   ; set flag
   set inPrison? true
+  set state "in_prison"
   set color red
   ; move to prison into an own cell (=own patch)
   move-to one-of patches with [not any? turtles-here and region = "prison"]
