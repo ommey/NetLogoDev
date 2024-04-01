@@ -72,7 +72,7 @@ ifelse inPrison? = true [
     if jailtime > jailsentence [; released from prison
       set jailtime 0
       ; move forward where there are no cops and is not prison
-      let places neighborhood with [not any? cops-here and region != "prison" and region != "diner"]
+      let places neighborhood with [not any? cops-here and region != "prison"]
       if any? places [move-to one-of places]
       set inPrison? false
       set color yellow
@@ -89,7 +89,7 @@ ifelse inPrison? = true [
       ] 
     ]    
     ; move forward where there are no cops and is not prison
-    let places neighborhood with [not any? cops-here and region != "prison" and region != "diner"]
+    let places neighborhood with [not any? cops-here and region != "prison"]
     if any? places [move-to one-of places]
   ]
 end
