@@ -77,6 +77,7 @@ extensions [
 breed [citizens citizen]  ;
 breed [cops cop] ;
 
+
 globals [
   ;
   max-jailterm
@@ -99,6 +100,8 @@ citizens-own [
   inPrison?
   jailtime
   jailsentence
+  nearestCop
+  state ; state variable for keeping track of current state
 ]
 ;---- Specific, local variables of cop-agents
 cops-own [
@@ -116,7 +119,7 @@ cops-own [
 to setup
   clear-all
   ; define global variables that are not set as sliders
-  set max-jailterm 50
+  set max-jailterm 51
 
 
 
@@ -203,6 +206,7 @@ to go
   ask turtles [
     ; Reactive part based on the type of agent
     if (breed = citizens) [
+      ;citizen_state_machine
       citizen_behavior ; code as defined in the include-file "citizens.nls"
       ]
     if (breed = cops) [
@@ -239,32 +243,34 @@ GRAPHICS-WINDOW
 66
 -33
 33
-0
-0
+-33
+33
+1
+1
 1
 ticks
 30.0
 
 SLIDER
-23
-397
-137
-430
+88
+45
+202
+78
 num-citizens
 num-citizens
 1
 30
-19.0
+15.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-22
-24
-85
-57
+8
+46
+71
+79
 setup
 setup
 NIL
@@ -278,10 +284,10 @@ NIL
 1
 
 BUTTON
-21
-73
-84
-106
+7
+95
+70
+128
 go
 go
 T
@@ -295,25 +301,25 @@ NIL
 1
 
 SLIDER
-23
-437
-136
-470
+88
+85
+201
+118
 num-cops
 num-cops
 0
 50
-4.0
+6.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-156
-398
-248
-431
+221
+46
+313
+79
 citizen-vision
 citizen-vision
 1
@@ -325,25 +331,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-156
-436
-248
-469
+221
+84
+313
+117
 cop-vision
 cop-vision
 1
 10
-3.0
+5.0
 0.1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-21
-500
-109
-533
+86
+148
+174
+181
 start recorder
 start-recorder
 NIL
@@ -357,10 +363,10 @@ NIL
 1
 
 BUTTON
-19
-542
-108
-575
+85
+190
+174
+223
 reset recorder
 reset-recorder
 NIL
@@ -374,10 +380,10 @@ NIL
 1
 
 BUTTON
-18
-584
-107
-617
+83
+232
+172
+265
 save recording
 save-recording
 NIL
@@ -391,10 +397,10 @@ NIL
 1
 
 MONITOR
-124
-503
-244
-548
+190
+151
+310
+196
 NIL
 vid:recorder-status
 3
@@ -402,20 +408,20 @@ vid:recorder-status
 11
 
 CHOOSER
-124
-559
-243
-604
+190
+207
+309
+252
 Source
 Source
 "Only View" "With Interface"
-1
+0
 
 TEXTBOX
-18
-468
-253
-496
+85
+263
+320
+323
 _______________________________________
 11
 0.0
@@ -472,6 +478,16 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+axe
+true
+0
+Rectangle -6459832 true false 120 45 150 75
+Rectangle -6459832 true false 120 105 150 270
+Polygon -7500403 true true 180 105
+Polygon -7500403 true true 135 165
+Polygon -7500403 true true 90 45 135 75 225 30 270 90 225 135 135 105 90 120 90 45
+Polygon -7500403 true true 135 165
 
 box
 false
