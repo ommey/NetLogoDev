@@ -23,7 +23,7 @@ to in_prison
   print (word "citizen " who "is in prison since: " jailtime)
   if jailtime > jailsentence [
     set jailtime 0
-    let places neighborhood with [not any? cops-here and region != "prison" and region != "diner"]
+    let places patches with [not any? cops-here and region != "prison" and region != "diner"]
     if any? places [move-to one-of places]
     set inPrison? false
     set color yellow
