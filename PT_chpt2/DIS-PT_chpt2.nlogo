@@ -162,6 +162,7 @@ to setup
     set jailtime 0
     set jailsentence 0
     ;set speed random 5 + 1 ; make sure it cannot be 0
+    set state "moving_around_freely"
   ]
 
   ;---- setup cops
