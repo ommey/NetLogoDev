@@ -62,6 +62,7 @@ __includes [
     "citizens.nls"
     "cops.nls"
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+    "bdi.nls"
 ]
 ; ********************end included files ********
 
