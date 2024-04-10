@@ -13,7 +13,7 @@ agents-own [
   jail-term           ; how many turns in jail remain? (if 0, the agent is not in jail)
   grievance
   estimated-arrest-probability
-  rebellious?
+  safeSpaces
   state
 ]
 
@@ -55,9 +55,10 @@ to setup
     set risk-aversion random-float 1.0
     set perceived-hardship random-float 1.0
     set active? false
-    set rebellious? false
     set jail-term 0
+    set state "civil"
     display-agent
+
   ]
 
   ; start clock and plot initial state of system
@@ -67,10 +68,35 @@ end
 to go
   ask turtles [
     if (breed = agents) [
-     AgentUpdateBeliefs
+     agentUpdateBeliefs
 
-     agentsDeliberate
-     agentsMeansEndsReasoning
+      if(state = "civil")[
+        set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+        if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(active? = true)[
+          set state "rebelling"
+        ]
+
+      ] if (state = "rebelling")[
+         set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+         if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(active? = false)[
+          set state "civil"
+        ]
+
+     ] if (state = "imprisoned")[
+        set jail-term jail-term - 1
+        if (jail-term = 0) [
+        set state "civil"
+        ]
+      ]
     ]
 
     if (breed = cops )[
@@ -78,8 +104,6 @@ to go
     ]
     if breed = cops [ enforce ]
   ]
-  ; Jailed agents get their term reduced at the end of each clock tick
-  ask agents [ if jail-term > 0 [ set jail-term jail-term - 1 ] ]
   ; update agent display
   ask agents [ display-agent ]
   ask cops [ display-cop ]
@@ -87,11 +111,8 @@ to go
   tick
 end
 
-; AGENT AND COP BEHAVIOR
-
-; move to an empty patch
 to move ; turtle procedure
-  if movement? or breed = cops [
+  if movement? = true or breed = cops [
     ; move to a patch in vision; candidate patches are
     ; empty or contain only jailed agents
     let targets neighborhood with [
@@ -101,21 +122,6 @@ to move ; turtle procedure
   ]
 end
 
-to agentsMeansEndsReasoning ; turtle procedure
-    ; move to a patch in vision; candidate patches are
-    ; empty or contain only jailed agents
-  if (jail-term = 0)[
-  if (rebellious? = true)[
-    set active? true
-  ]
-    let targets neighborhood with [
-      not any? cops-here and all? agents-here [ jail-term > 0 ]
-    ]
-    if any? targets [ move-to one-of targets ]
-  ]
-end
-
-; AGENT BEHAVIOR
 to AgentUpdateBeliefs
 
   set grievance perceived-hardship * (1 - government-legitimacy)
@@ -124,29 +130,11 @@ to AgentUpdateBeliefs
   let a 1 + count (agents-on neighborhood) with [ active? ]
   ; See Info tab for a discussion of the following formula
   set estimated-arrest-probability 1 - exp (- k * floor (c / a))
+  set safeSpaces neighborhood with [
+      not any? cops-here and all? agents-here [ jail-term > 0 ]
+    ]
 
 end
-
-to agentsDeliberate
-  if (jail-term = 0)[
-  set rebellious? (grievance - risk-aversion * estimated-arrest-probability > threshold)
-  ]
-end
-
-;to determine-behavior
-;  set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
-;end
-
-;to-report grievance
-;  report perceived-hardship * (1 - government-legitimacy)
-;end
-
-;to-report estimated-arrest-probability
-;  let c count cops-on neighborhood
-;  let a 1 + count (agents-on neighborhood) with [ active? ]
-;  ; See Info tab for a discussion of the following formula
-;  report 1 - exp (- k * floor (c / a))
-;end
 
 ; COP BEHAVIOR
 
@@ -157,6 +145,7 @@ to enforce
     move-to suspect  ; move to patch of the jailed agent
     ask suspect [
       set active? false
+      set state "imprisoned"
       set jail-term random max-jail-term
     ]
   ]
