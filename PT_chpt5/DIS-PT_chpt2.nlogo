@@ -62,6 +62,7 @@ __includes [
     "citizens.nls"
     "cops.nls"
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+    "bdi.nls"
 ]
 ; ********************end included files ********
 
@@ -102,6 +103,9 @@ citizens-own [
   jailsentence
   nearestCop
   state ; state variable for keeping track of current state
+  show-intentions
+  intentions
+  beliefs
 ]
 ;---- Specific, local variables of cop-agents
 cops-own [
@@ -163,6 +167,9 @@ to setup
     set jailsentence 0
     ;set speed random 5 + 1 ; make sure it cannot be 0
     set state "moving_around_freely"
+    set show-intentions true
+    set intentions 1
+    set beliefs 1
   ]
 
   ;---- setup cops
