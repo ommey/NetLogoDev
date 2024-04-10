@@ -11,6 +11,10 @@ agents-own [
   perceived-hardship  ; H, also ranging from 0-1 (inclusive)
   active?             ; if true, then the agent is actively rebelling
   jail-term           ; how many turns in jail remain? (if 0, the agent is not in jail)
+  grievance
+  estimated-arrest-probability
+  safeSpaces
+  state
 ]
 
 patches-own [
@@ -52,7 +56,9 @@ to setup
     set perceived-hardship random-float 1.0
     set active? false
     set jail-term 0
+    set state "civil"
     display-agent
+
   ]
 
   ; start clock and plot initial state of system
@@ -61,15 +67,43 @@ end
 
 to go
   ask turtles [
-    ; Rule M: Move to a random site within your vision
-    if (breed = agents and jail-term = 0) or breed = cops [ move ]
-    ;   Rule A: Determine if each agent should be active or quiet
-    if breed = agents and jail-term = 0 [ determine-behavior ]
-    ;  Rule C: Cops arrest a random active agent within their radius
+    if (breed = agents) [
+     agentUpdateBeliefs
+
+      if(state = "civil")[
+        set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+        if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(active? = true)[
+          set state "rebelling"
+        ]
+
+      ] if (state = "rebelling")[
+         set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+         if(movement? = true)[
+          if any? safeSpaces [ move-to one-of safeSpaces ]
+        ]
+        if(active? = false)[
+          set state "civil"
+        ]
+
+     ] if (state = "imprisoned")[
+        set jail-term jail-term - 1
+        if (jail-term = 0) [
+        set state "civil"
+        ]
+      ]
+    ]
+
+    if (breed = cops )[
+      move
+    ]
     if breed = cops [ enforce ]
   ]
-  ; Jailed agents get their term reduced at the end of each clock tick
-  ask agents [ if jail-term > 0 [ set jail-term jail-term - 1 ] ]
   ; update agent display
   ask agents [ display-agent ]
   ask cops [ display-cop ]
@@ -77,11 +111,8 @@ to go
   tick
 end
 
-; AGENT AND COP BEHAVIOR
-
-; move to an empty patch
 to move ; turtle procedure
-  if movement? or breed = cops [
+  if movement? = true or breed = cops [
     ; move to a patch in vision; candidate patches are
     ; empty or contain only jailed agents
     let targets neighborhood with [
@@ -91,21 +122,18 @@ to move ; turtle procedure
   ]
 end
 
-; AGENT BEHAVIOR
+to AgentUpdateBeliefs
 
-to determine-behavior
-  set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
-end
+  set grievance perceived-hardship * (1 - government-legitimacy)
 
-to-report grievance
-  report perceived-hardship * (1 - government-legitimacy)
-end
-
-to-report estimated-arrest-probability
   let c count cops-on neighborhood
   let a 1 + count (agents-on neighborhood) with [ active? ]
   ; See Info tab for a discussion of the following formula
-  report 1 - exp (- k * floor (c / a))
+  set estimated-arrest-probability 1 - exp (- k * floor (c / a))
+  set safeSpaces neighborhood with [
+      not any? cops-here and all? agents-here [ jail-term > 0 ]
+    ]
+
 end
 
 ; COP BEHAVIOR
@@ -117,6 +145,7 @@ to enforce
     move-to suspect  ; move to patch of the jailed agent
     ask suspect [
       set active? false
+      set state "imprisoned"
       set jail-term random max-jail-term
     ]
   ]
@@ -344,7 +373,7 @@ initial-agent-density
 initial-agent-density
 0.0
 100.0
-70.0
+69.0
 1.0
 1
 %
@@ -853,7 +882,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.3.0
+NetLogo 6.4.0
 @#$#@#$#@
 setup
 repeat 5 [ go ]
