@@ -11,6 +11,10 @@ agents-own [
   perceived-hardship  ; H, also ranging from 0-1 (inclusive)
   active?             ; if true, then the agent is actively rebelling
   jail-term           ; how many turns in jail remain? (if 0, the agent is not in jail)
+  grievance
+  estimated-arrest-probability
+  rebellious?
+  state
 ]
 
 patches-own [
@@ -51,6 +55,7 @@ to setup
     set risk-aversion random-float 1.0
     set perceived-hardship random-float 1.0
     set active? false
+    set rebellious? false
     set jail-term 0
     display-agent
   ]
@@ -61,11 +66,16 @@ end
 
 to go
   ask turtles [
-    ; Rule M: Move to a random site within your vision
-    if (breed = agents and jail-term = 0) or breed = cops [ move ]
-    ;   Rule A: Determine if each agent should be active or quiet
-    if breed = agents and jail-term = 0 [ determine-behavior ]
-    ;  Rule C: Cops arrest a random active agent within their radius
+    if (breed = agents) [
+     AgentUpdateBeliefs
+
+     agentsDeliberate
+     agentsMeansEndsReasoning
+    ]
+
+    if (breed = cops )[
+      move
+    ]
     if breed = cops [ enforce ]
   ]
   ; Jailed agents get their term reduced at the end of each clock tick
@@ -91,22 +101,52 @@ to move ; turtle procedure
   ]
 end
 
+to agentsMeansEndsReasoning ; turtle procedure
+    ; move to a patch in vision; candidate patches are
+    ; empty or contain only jailed agents
+  if (jail-term = 0)[
+  if (rebellious? = true)[
+    set active? true
+  ]
+    let targets neighborhood with [
+      not any? cops-here and all? agents-here [ jail-term > 0 ]
+    ]
+    if any? targets [ move-to one-of targets ]
+  ]
+end
+
 ; AGENT BEHAVIOR
+to AgentUpdateBeliefs
 
-to determine-behavior
-  set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
-end
+  set grievance perceived-hardship * (1 - government-legitimacy)
 
-to-report grievance
-  report perceived-hardship * (1 - government-legitimacy)
-end
-
-to-report estimated-arrest-probability
   let c count cops-on neighborhood
   let a 1 + count (agents-on neighborhood) with [ active? ]
   ; See Info tab for a discussion of the following formula
-  report 1 - exp (- k * floor (c / a))
+  set estimated-arrest-probability 1 - exp (- k * floor (c / a))
+
 end
+
+to agentsDeliberate
+  if (jail-term = 0)[
+  set rebellious? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+  ]
+end
+
+;to determine-behavior
+;  set active? (grievance - risk-aversion * estimated-arrest-probability > threshold)
+;end
+
+;to-report grievance
+;  report perceived-hardship * (1 - government-legitimacy)
+;end
+
+;to-report estimated-arrest-probability
+;  let c count cops-on neighborhood
+;  let a 1 + count (agents-on neighborhood) with [ active? ]
+;  ; See Info tab for a discussion of the following formula
+;  report 1 - exp (- k * floor (c / a))
+;end
 
 ; COP BEHAVIOR
 
@@ -344,7 +384,7 @@ initial-agent-density
 initial-agent-density
 0.0
 100.0
-70.0
+69.0
 1.0
 1
 %
@@ -853,7 +893,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.3.0
+NetLogo 6.4.0
 @#$#@#$#@
 setup
 repeat 5 [ go ]
