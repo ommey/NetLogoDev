@@ -87,6 +87,8 @@ globals [
 ;---- General agent variables
 turtles-own [
   ;speed
+  beliefs
+  intentions
 ]
 
 ;---- Specific, local variables of patches
@@ -315,7 +317,7 @@ num-cops
 num-cops
 0
 50
-6.0
+2.0
 1
 1
 NIL
@@ -432,6 +434,17 @@ _______________________________________
 11
 0.0
 1
+
+SWITCH
+82
+286
+228
+319
+show-intentions
+show-intentions
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
