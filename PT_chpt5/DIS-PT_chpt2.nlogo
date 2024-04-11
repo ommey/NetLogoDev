@@ -62,6 +62,7 @@ __includes [
     "citizens.nls"
     "cops.nls"
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+    ;"bdi.nls"
 ]
 ; ********************end included files ********
 
@@ -86,6 +87,8 @@ globals [
 ;---- General agent variables
 turtles-own [
   ;speed
+  beliefs
+  intentions
 ]
 
 ;---- Specific, local variables of patches
@@ -308,7 +311,7 @@ num-cops
 num-cops
 0
 50
-6.0
+2.0
 1
 1
 NIL
@@ -425,6 +428,17 @@ _______________________________________
 11
 0.0
 1
+
+SWITCH
+82
+286
+228
+319
+show-intentions
+show-intentions
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
