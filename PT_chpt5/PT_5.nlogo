@@ -1,152 +1,100 @@
-; DIS-PT_chpt2
-; template for the programming task with cops and citizen agents
-;
-; HOW TO WORK WITH THIS FILE:
-;
-; 1. Bransch this file from Github for your group
-; 2. Divide the work from the task to your group members, so that every group member has at least one own task
-; 3. Make individual bransches per group member from the group-bransch that you made under 1.
-; 4. Start with your individual tasks development and make push- and pulls between your individual bransches as needed
-; 5. When the individual tasks are finished you need to merge the different parts back into the original group-bransch
-; 6. Make sure that the final version works before uploading it under PT_chpt.2 on Canvas.
-;
-;
+;reactive behavior: a citizen agent walks to a given destination A.
+;If it encounters cop-agents it tries to escape from being arrested.
+;If it is being arrested it has to move to prison.
 
+;proactive behavior: if the citizen agent arrives at destination A,
+;it has to decide whether to go to destination B or C.
+;It does this by flipping a coin. If the agent finds itself in prison, it
 
-
-;development comments
-;
-;1-different ways to find other agents within a vision range:
-; a) if they are neighbors to the agent looking (probably includes oneself as well?)
-;let target one-of citizens-on neighbors
-; b) if they look within a radius (360 degrees around?)
-;set target one-of other citizens in-radius 2
-;let police one-of other cops in-radius 2
-
-;let nearby-officers other turtles with [breed = cops] in-radius (vision_range * 3)
-;set target min-one-of nearby-officers [xcor + ycor]
-;
-; c) within cones
-;set target turtles-on patches in-cone 3 60
-;set target min-one-of other turtles in-cone 3 60 [distance myself]
-
-;2-finding a patch in the neighborhood to move to that does not contain agents of a certain breed
-;use patches by letting each patch define its neighborhood
-;-requires own patch-variable 'neighborhood'
-;patches-own [
-;  neighborhood        ; surrounding patches within the vision radius
-;]
-; -requires to ask the patches to set their variable neighborhood to the patches within their in-radius vision
-;ask patches [
-;  set neighborhood patches in-radius vision ; vision is a variable, set for example by ruler
-; ]
-;
-;- moving to a patch that contains no police
-;to move
-;  let targets neighborhood with [not any? cops-here]
-;  if any? targets [move-to one-of targets]
-;
-;3- cops finding citizens close enough nearby to arrest
-; if any? (citizens-on neighborhood) with [ active? ] [
-;    let suspect one-of (citizens-on neighborhood) with [ active? ]
-;    move-to suspect  ; move to patch of the suspect
-;    ask suspect [
-;      set active? false
-;      set jail-term random max-jail-term
-;      go-to prison
-;    ]
-
-
-; ************ INCLUDED FILES *****************
 __includes [
-    "citizens.nls"
-    "cops.nls"
-    "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
-]
-; ********************end included files ********
+    "bdi.nls"
+ ]
 
-; ************ EXTENSIONS *****************
-extensions [
- vid bitmap; used for recording of the simulation
-]
-; ********************end extensions ********
 
-;****************** INITIAL AND DEFINITIONS PART **********
-;
-;----- Breeds of agents
 breed [citizens citizen]  ;
 breed [cops cop] ;
 
-
-globals [
-  ;
-  max-jailterm
-]
-
-;---- General agent variables
-turtles-own [
-  ;speed
-]
-
-;---- Specific, local variables of patches
 patches-own [
   neighborhood        ; surrounding patches within the vision radius
   region              ; used for identification of different regions
 ]
 
-;---- Specific, local variables of citizen-agents
 citizens-own [
   ;citizen-vision is set by ruler 'citizen-vision'
-  inPrison?
-  jailtime
-  jailsentence
-  nearestCop
-  state ; state variable for keeping track of current state
+  ;inPrison?
+  ;jailtime
+  ;jailsentence
+  ;nearestCop
+  ;speed
+
+  intentions
+  beliefs
+
 ]
-;---- Specific, local variables of cop-agents
+
 cops-own [
-  ;cop-vision is set by slider
-  cop-speed
-  energy
-  eating?
+  target
+]
+
+globals[
+
 ]
 
 
-
-
-; ******************* SETUP PART *****************
-; setup of the environment, and the different agents
 to setup
   clear-all
-  ; define global variables that are not set as sliders
-  set max-jailterm 51
-
-
-
   ; setup of the environment:
   ; setup of all patches
+
   ask patches [
     ; make background a certain color or leave it black
-    ;set pcolor white - 1
+    set pcolor white - 1
     ; cache patch neighborhoods
     set neighborhood patches in-radius citizen-vision
   ]
-  ; setup prison
-  let prisonpatches patches with [ pxcor >= -5 and pxcor <= 20 and pycor >= -5 and pycor <= 15 ]
-    ask prisonpatches [
+  ; setup area 'A'
+  let Apatches patches with [ pxcor >= -33 and pxcor <= -28 and pycor >= 28 and pycor <= 33 ]
+    ask Apatches [
       set pcolor gray
-      set region "prison"
+      set region "A"
     ]
-    ask one-of prisonpatches [set plabel "PRISON"]
+    ask one-of Apatches [set plabel "A"]
 
-  ; setup diner
-  let dinerpatches patches with [ pxcor >= -35  and pxcor <= -20 and pycor >= -5 and pycor <= 15 ]
-    ask dinerpatches [
-      set pcolor pink
-      set region "diner"
+  ; setup area 'B'
+  let Bpatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= 28 and pycor <= 33 ]
+    ask Bpatches [
+      set pcolor yellow
+      set region "B"
     ]
-    ask one-of dinerpatches [set plabel "DINER"]
+    ask one-of Bpatches [set plabel "B"]
 
+  ; setup area 'C'
+  let Cpatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= -33 and pycor <= -28 ]
+    ask Cpatches [
+      set pcolor magenta
+      set region "C"
+    ]
+      ask one-of Cpatches [set plabel "C"]
+
+  ; setup prison
+  let prisonPatches patches with [pxcor >= -33 and pxcor <= -23 and pycor >= -33 and pycor <= -23]
+  ask prisonPatches [
+  set pcolor blue
+  set region "prison"
+  ]
+  ask patch -23 -23 [
+  set plabel "prison"
+  ]
+
+  ;---- setup cops
+  create-cops num-cops [
+    set label who
+    set shape "police"
+    set size 1.5
+    set color blue
+    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "A" and region != "B" and region != "C"]
+    set target nobody
+  ]
 
   ; setup citizen-agents
   create-citizens num-citizens [
@@ -156,140 +104,242 @@ to setup
     set color green
     setxy random-xcor random-ycor
     ; make sure the agents are not placed in prison already during setup:
-    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "diner"]
+    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "A" and region != "B" and region != "C"]
     ; setting specific variables for citizen
-    set inPrison? false
-    set jailtime 0
-    set jailsentence 0
-    ;set speed random 5 + 1 ; make sure it cannot be 0
-    set state "moving_around_freely"
+    ;set inPrison? false
+    ;set jailtime 0
+    ;set jailsentence 0
+    set beliefs []
+    set intentions []
+
+
+
+
+    add-belief create-belief "nearbyCop" "nobody"
+    ;print belief-content  get-belief "nearbyCop"
+
+    add-belief create-belief "whereToGo" "A"
+    ;print belief-content  get-belief "whereToGo"
+
+    add-belief create-belief "arrested" false
+    ;print belief-content  get-belief "arrested"
+
+    add-belief create-belief "jailTime" 0
+
+
+
+    add-belief create-belief "vision" citizen-vision
+    ;print belief-content get-belief "vision"
+
+    add-belief create-belief "speed" citizen-speed
+    ;print belief-content  get-belief "speed
+
+
   ]
-
-  ;---- setup cops
-  create-cops num-cops [
-    set label who
-    set shape "person police"
-    set size 2
-    set color blue
-    set energy 100
-    set eating? false
-    set cop-speed random 3 + 1 ; make sure it cannot be 0
-    move-to one-of patches with [ not any? turtles-here and region != "prison"]
-  ]
-
-
-
   ; must be last in the setup-part:
-  reset-ticks
-  ;recorder
-  if vid:recorder-status = "recording" [
-    if Source = "Only View" [vid:record-view] ; records the plane
-    if Source = "With Interface" [vid:record-interface] ; records the interface
+    reset-ticks
+end
+
+to go
+  tick ;- update time
+
+  ;---- Agents to-go part -------------
+
+  ask turtles [
+    ; Reactive part based on the type of agent
+    if (breed = citizens) [
+      updateBeliefs
+
+        execute-behaviors
+        ;print intention-name get-intention
+
+
+      ;
+      ]
+    if (breed = cops) [
+      cop_behavior
+      ]
+  ]
+print " "
+
+end
+
+to updateBeliefs
+
+  ;cop nearby
+  let nearby-police other cops in-radius citizen-vision
+    ifelse (any? nearby-police) [let police create-belief "nearbyCop" min-one-of nearby-police [distance myself]; identify the cop that is nearest
+    update-belief police
+  ][
+    let noCop create-belief "nearbyCop" nobody
+    update-belief noCop
+  ]
+  ;served sentence
+  if (belief-content get-belief "jailTime" = 0 and belief-content get-belief "arrested" = true)[
+    update-belief create-belief "arrested" false
+    update-belief create-belief "whereToGo" "A"
+  ]
+
+
+
+end
+
+to execute-behaviors
+  ifelse (belief-content get-belief "arrested")[
+       add-intention "serve" "true"
+
+  ][
+    ifelse (belief-content get-belief "nearbyCop" != nobody)[
+
+        add-intention "avoidCops" "true"
+
+    ][
+      ifelse (arrived)[
+        ;print "proactive"
+        decideWhereToGoNext
+      ][
+          add-intention "moveTowardsRegion" "true"
+      ]
+    ]
+  ]
+  print intentions
+  execute-intentions
+end
+
+to-report servedTime
+ifelse (belief-content get-belief "jailTime" = 0) and (belief-content "arrested" = true) and ([region] of patch-here = "prison") [
+  report true
+] [
+  report false
+]
+end
+
+to serve
+  ifelse(arrived)[
+    let currentJailTime belief-content get-belief "jailTime"
+    let newJailTime create-belief "jailTime" (currentJailTime - 1)
+    update-belief newJailTime
+  ][
+    moveTowardsRegion
+
+
   ]
 
 end
 
-; **************************end setup part *******
+to decideWhereToGoNext
+  ifelse (belief-content get-belief "whereToGo" = "A")[
+    let coin random 2
+    ifelse (coin = 0) [
+      update-belief create-belief "whereToGo" "B"
+    ][update-belief create-belief "whereToGo" "C"]
+ ][update-belief create-belief "whereToGo" "A"
+  ]
+end
+
+
+to moveTowardsRegion
+  ;print belief-content get-belief "whereToGo"
+  let regionOfDestination  belief-content  get-belief "whereToGo"
+  let target-patch one-of patches with [region = regionOfDestination]
+
+  if target-patch != nobody [
+    face target-patch
+  ]
+  forward citizen-speed
+end
+
+to avoidCops
+  let nearestCop belief-content get-belief "nearbyCop"
+  if is-agent? nearestCop [
+    set heading (towards nearestCop) + 180 ; face opposite from the nearest police  ; face towards the nearest police
+    forward belief-content get-belief "speed"
+    ;print (word " citizen: " who " evaded cop: " nearestCop)
+  ]
+end
+
+to-report coastClear
+  let nearby-police other cops in-radius citizen-vision
+  ifelse any? nearby-police [report false][report true]
+end
+
+
+to-report arrived
+  ifelse [region] of patch-here = belief-content get-belief "whereToGo"
+  [report true]
+  [report false]
+end
 
 
 
-; ******************* TO GO/ STARTING PART ********
-;;
-to go
-  ;---- Basic functions, like setting the time
-  ;
-  tick ;- update time
 
-
-  ;---- Agents to-go part -------------
-  ; Cyclic execution of what the agents are supposed to do
-  ;
-  ask turtles [
-    ; Reactive part based on the type of agent
-    if (breed = citizens) [
-      citizen_state_machine
-      ;citizen_behavior ; code as defined in the include-file "citizens.nls"
-      ]
-    if (breed = cops) [
-      cop_behavior ; code as defined in the include-file "cops.nls"
-      ]
+to cop_behavior
+  ; Check if the cop already has a target
+  if target = nobody [
+    ; Look for citizens nearby to arrest
+    set target one-of citizens with [belief-content get-belief "arrested" = false] in-radius cop-vision
   ]
 
-  ;recorder
- if vid:recorder-status = "recording" [
-    if Source = "Only View" [vid:record-view] ; records the plane
-    if Source = "With Interface" [vid:record-interface] ; records the interface
+  ; If a target is found, proceed to arrest it
+  ifelse target != nobody [
+    ; Move towards the target and arrest it
+    face target
+    ifelse distance target <= 1 [
+      ; Arrest the target
+      ask target [
+        update-belief create-belief "whereToGo" "prison"
+        let jailterm random max-jailTerm + 1
+        update-belief create-belief "jailTime" jailTerm
+        update-belief create-belief "arrested" true
+      ]
+      ; Reset target after arrest
+      set target nobody
+    ][
+      ; Move forward towards the target
+      forward cop-speed
+    ]
+  ][
+    ; If no target is found, roam randomly
+    left random 360
+    forward cop-speed
   ]
-
-end ; - to go part
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-331
-17
-881
-568
+212
+14
+687
+490
 -1
 -1
-8.1
+6.58
 1
 10
 1
 1
 1
 0
+0
+0
 1
-1
-1
--33
-33
--33
-33
+-35
+35
+-35
+35
 1
 1
 1
 ticks
-30.0
+120.0
 
-SLIDER
+BUTTON
+25
+62
 88
-45
-202
-78
-num-citizens
-num-citizens
-1
-30
-15.0
-1
-1
-NIL
-HORIZONTAL
-
-BUTTON
-8
-46
-71
-79
-setup
-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-7
 95
-70
-128
-go
-go
-T
+setup
+setup
+NIL
 1
 T
 OBSERVER
@@ -299,58 +349,146 @@ NIL
 NIL
 1
 
-SLIDER
+BUTTON
+24
+96
 88
-85
-201
-118
-num-cops
-num-cops
-0
-50
-6.0
+129
+go
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+19
+272
+191
+305
+num-citizens
+num-citizens
+1
+100
+1.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-221
-46
-313
-79
-citizen-vision
-citizen-vision
+19
+304
+191
+337
+num-cops
+num-cops
 1
-10
-3.0
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-221
-84
-313
-117
-cop-vision
-cop-vision
-1
-10
+100
 5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+338
+191
+371
+citizen-vision
+citizen-vision
+1
+10
+10.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+371
+191
+404
+cop-vision
+cop-vision
+1
+100
+10.5
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+240
+191
+273
+max-jailterm
+max-jailterm
+1
+100
+100.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+42
+181
+188
+214
+show-intentions
+show-intentions
+1
+1
+-1000
+
+SLIDER
+17
+437
+189
+470
+cop-speed
+cop-speed
+0
+5
+0.6
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+19
+405
+191
+438
+citizen-speed
+citizen-speed
+0
+5
+0.5
 0.1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-86
-148
-174
-181
-start recorder
-start-recorder
+123
+132
+186
+165
+go
+go
 NIL
 1
 T
@@ -359,71 +497,6 @@ NIL
 NIL
 NIL
 NIL
-1
-
-BUTTON
-85
-190
-174
-223
-reset recorder
-reset-recorder
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-83
-232
-172
-265
-save recording
-save-recording
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-MONITOR
-190
-151
-310
-196
-NIL
-vid:recorder-status
-3
-1
-11
-
-CHOOSER
-190
-207
-309
-252
-Source
-Source
-"Only View" "With Interface"
-0
-
-TEXTBOX
-85
-263
-320
-323
-_______________________________________
-11
-0.0
 1
 
 @#$#@#$#@
@@ -477,16 +550,6 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
-
-axe
-true
-0
-Rectangle -6459832 true false 120 45 150 75
-Rectangle -6459832 true false 120 105 150 270
-Polygon -7500403 true true 180 105
-Polygon -7500403 true true 135 165
-Polygon -7500403 true true 90 45 135 75 225 30 270 90 225 135 135 105 90 120 90 45
-Polygon -7500403 true true 135 165
 
 box
 false
@@ -653,29 +716,6 @@ Rectangle -7500403 true true 127 79 172 94
 Polygon -7500403 true true 195 90 240 150 225 180 165 105
 Polygon -7500403 true true 105 90 60 150 75 180 135 105
 
-person police
-false
-0
-Polygon -1 true false 124 91 150 165 178 91
-Polygon -13345367 true false 134 91 149 106 134 181 149 196 164 181 149 106 164 91
-Polygon -13345367 true false 180 195 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285
-Polygon -13345367 true false 120 90 105 90 60 195 90 210 116 158 120 195 180 195 184 158 210 210 240 195 195 90 180 90 165 105 150 165 135 105 120 90
-Rectangle -7500403 true true 123 76 176 92
-Circle -7500403 true true 110 5 80
-Polygon -13345367 true false 150 26 110 41 97 29 137 -1 158 6 185 0 201 6 196 23 204 34 180 33
-Line -13345367 false 121 90 194 90
-Line -16777216 false 148 143 150 196
-Rectangle -16777216 true false 116 186 182 198
-Rectangle -16777216 true false 109 183 124 227
-Rectangle -16777216 true false 176 183 195 205
-Circle -1 true false 152 143 9
-Circle -1 true false 152 166 9
-Polygon -1184463 true false 172 112 191 112 185 133 179 133
-Polygon -1184463 true false 175 6 194 6 189 21 180 21
-Line -1184463 false 149 24 197 24
-Rectangle -16777216 true false 101 177 122 187
-Rectangle -16777216 true false 179 164 183 186
-
 plant
 false
 0
@@ -687,6 +727,25 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+police
+false
+0
+Circle -7500403 true true 110 5 80
+Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -7500403 true true 127 79 172 94
+Polygon -7500403 true true 195 90 240 150 225 180 165 105
+Polygon -7500403 true true 105 90 60 150 75 180 135 105
+Rectangle -13791810 true false 105 15 195 45
+Rectangle -13791810 true false 120 0 180 15
+Circle -1184463 true false 135 15 0
+Circle -1184463 true false 135 15 30
+Rectangle -13791810 true false 120 90 180 195
+Line -13791810 false 105 90 120 90
+Polygon -13791810 true false 105 90 120 195 120 90 105 90 105 90 105 90 120 195 120 120
+Polygon -7500403 true true 180 90 195 90 180 120 180 90 195 90 180 120
+Polygon -13791810 true false 180 120 195 90 180 90 180 120
+Polygon -13791810 true false 165 255 195 255 180 195 120 195 105 255 150 255 150 225 150 255 165 255
 
 sheep
 false
