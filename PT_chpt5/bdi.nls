@@ -62,14 +62,28 @@ to-report beliefs-of-type [b-type]
 end
 
 ;;; Returns the agent's belief of a certain type and removes it
-to-report get-belief [b-type agent]
-  ifelse exist-beliefs-of-type b-type 
-  [let bel first filter [first beliefs = b-type and item 1 beliefs = agent] beliefs
-   remove-belief bel
+;to-report get-belief [b-type agent]
+;  ifelse exist-beliefs-of-type  b-type 
+;  [let bel first filter [first beliefs = b-type and item 1 beliefs = agent] beliefs
+;   remove-belief bel
+;   report bel
+;  ]
+;  [report false]
+;end
+
+to-report get-belief [b-type]  
+ ifelse exist-beliefs-of-type  b-type 
+  [let bel first beliefs-of-type b-type
+   ;remove-belief bel
    report bel
   ]
   [report false]
 end
+
+
+
+
+
 
 to-report read-first-belief-of-type [b-type]
    report first beliefs-of-type b-type
@@ -126,6 +140,9 @@ to remove-intention [bdi-lib##intention]
   set intentions remove-item (position bdi-lib##intention intentions) intentions
 end 
 
+to-report intention-exists? [intent]
+  report member? intent intentions
+end
 
 
 ;; Adds an intention in the intentions list. REMEMBER that intentions are 
