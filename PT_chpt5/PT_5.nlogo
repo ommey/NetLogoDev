@@ -374,7 +374,7 @@ num-citizens
 num-citizens
 1
 100
-1.0
+20.0
 1
 1
 NIL
@@ -389,7 +389,7 @@ num-cops
 num-cops
 1
 100
-1.0
+5.0
 1
 1
 NIL
