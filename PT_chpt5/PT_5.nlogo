@@ -90,13 +90,13 @@ to setup
 
 
     add-belief create-belief "nearbyCop" "nobody"
-    ;print belief-content  get-belief "nearbyCop"
+    ;print belief-content  getbelief "nearbyCop"
 
     add-belief create-belief "whereToGo" "diner"
-    ;print belief-content  get-belief "whereToGo"
+    ;print belief-content  getbelief "whereToGo"
 
     add-belief create-belief "arrested" false
-    ;print belief-content  get-belief "arrested"
+    ;print belief-content  getbelief "arrested"
 
     add-belief create-belief "jailTime" 0
 
@@ -105,10 +105,10 @@ to setup
 
 
     add-belief create-belief "vision" citizen-vision
-    ;print belief-content get-belief "vision"
+    ;print belief-content getbelief "vision"
 
     add-belief create-belief "speed" citizen-speed
-    ;print belief-content  get-belief "speed
+    ;print belief-content  getbelief "speed
 
 
   ]
@@ -165,7 +165,7 @@ to updateBeliefs
 end
 
 to-report servedTime
-ifelse belief-content get-belief "jailTime" = 0 and belief-content get-belief "arrested" = true [
+ifelse belief-content getbelief "jailTime" = 0 and belief-content getbelief "arrested" = true [
   report true
 ] [
   report false
@@ -174,7 +174,7 @@ end
 
 to serve
   ifelse(arrived)[
-    let currentJailTime belief-content get-belief "jailTime"
+    let currentJailTime belief-content getbelief "jailTime"
     let newJailTime create-belief "jailTime" (currentJailTime - 1)
     update-belief newJailTime
     set heading (towards one-of patches with [region = "prison"])
@@ -189,11 +189,11 @@ end
 
 to reactiveBehavior
 
-  ifelse(belief-content get-belief "arrested")[
+  ifelse(belief-content getbelief "arrested")[
     if (not intention-exists? ["serve" "servedTime"])[
       add-intention "serve" "servedTime"
     ]
-  ][ifelse(belief-content get-belief "nearbyCop" != nobody)[
+  ][ifelse(belief-content getbelief "nearbyCop" != nobody)[
       if (not intention-exists? ["avoidCops" "coastClear"])[
       add-intention "avoidCops" "coastClear"
     ]
@@ -217,8 +217,8 @@ end
 
 
 to moveTowardsRegion
-  ;print belief-content get-belief "whereToGo"
-  let regionOfDestination  belief-content  get-belief "whereToGo"
+  ;print belief-content getbelief "whereToGo"
+  let regionOfDestination  belief-content  getbelief "whereToGo"
   let target-patch one-of patches with [region = regionOfDestination]
 
   if target-patch != nobody [
@@ -228,22 +228,22 @@ to moveTowardsRegion
 end
 
 to avoidCops
-  let nearestCop belief-content get-belief "nearbyCop"
+  let nearestCop belief-content getbelief "nearbyCop"
   if is-agent? nearestCop [
     set heading (towards nearestCop) + 180 ; face opposite from the nearest police  ; face towards the nearest police
-    forward belief-content get-belief "speed"
+    forward belief-content getbelief "speed"
     ;print (word " citizen: " who " evaded cop: " nearestCop)
   ]
 end
 
 to-report coastClear
   let nearby-police other cops in-radius citizen-vision
-  ifelse not any? nearby-police or belief-content get-belief "arrested" [report true][report false]
+  ifelse not any? nearby-police or belief-content getbelief "arrested" [report true][report false]
 end
 
 
 to-report arrived
-  ifelse [region] of patch-here = belief-content get-belief "whereToGo"
+  ifelse [region] of patch-here = belief-content getbelief "whereToGo"
   [report true]
   [report false]
 end
@@ -252,7 +252,7 @@ to cop_behavior
   ; Check if the cop already has a target
   if target = nobody [
     ; Look for citizens nearby to arrest
-    set target one-of citizens with [belief-content get-belief "arrested" = false] in-radius cop-vision
+    set target one-of citizens with [belief-content getbelief "arrested" = false] in-radius cop-vision
   ]
 
   ; If a target is found, proceed to arrest it
@@ -282,7 +282,7 @@ end
 
 to decideWhetherToLeave
   ;fsm that  decides next destination or stay
-  ifelse (belief-content get-belief "whereToGo" = "diner")[
+  ifelse (belief-content getbelief "whereToGo" = "diner")[
     let coin random 200
     ;print "coin tossed"
     ifelse (coin < 1) [
@@ -302,6 +302,21 @@ to decideWhetherToLeave
   ]
 
 
+end
+
+;;gets belief of type b-type
+to-report getbelief [b-type]
+ ifelse exist-beliefs-of-type  b-type
+  [let bel first beliefs-of-type b-type
+   ;remove-belief bel
+   report bel
+  ]
+  [report false]
+end
+
+;;checks if intention exists
+to-report intention-exists? [intent]
+  report member? intent intentions
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
