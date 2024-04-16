@@ -140,6 +140,9 @@ to remove-intention [bdi-lib##intention]
   set intentions remove-item (position bdi-lib##intention intentions) intentions
 end 
 
+to-report intention-exists? [intent]
+  report member? intent intentions
+end
 
 
 ;; Adds an intention in the intentions list. REMEMBER that intentions are 

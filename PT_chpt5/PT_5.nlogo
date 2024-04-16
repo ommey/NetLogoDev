@@ -20,12 +20,6 @@ patches-own [
 ]
 
 citizens-own [
-  ;citizen-vision is set by ruler 'citizen-vision'
-  ;inPrison?
-  ;jailtime
-  ;jailsentence
-  ;nearestCop
-  ;speed
 
   intentions
   beliefs
@@ -48,33 +42,25 @@ to setup
 
   ask patches [
     ; make background a certain color or leave it black
-    set pcolor white - 1
+    set pcolor white - 5
     ; cache patch neighborhoods
     set neighborhood patches in-radius citizen-vision
   ]
-  ; setup area 'A'
-  let Apatches patches with [ pxcor >= -33 and pxcor <= -28 and pycor >= 28 and pycor <= 33 ]
-    ask Apatches [
-      set pcolor gray
-      set region "A"
-    ]
-    ask one-of Apatches [set plabel "A"]
 
-  ; setup area 'B'
-  let Bpatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= 28 and pycor <= 33 ]
-    ask Bpatches [
-      set pcolor yellow
-      set region "B"
+  ; setup area 'diner'
+  let dinerPatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= 28 and pycor <= 33 ]
+    ask dinerPatches [
+      set pcolor green - 2
+      set region "diner"
     ]
-    ask one-of Bpatches [set plabel "B"]
+    ask one-of dinerPatches [set plabel "diner"]
 
-  ; setup area 'C'
-  let Cpatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= -33 and pycor <= -28 ]
-    ask Cpatches [
+  let diner2Patches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= -33 and pycor <= -28 ]
+    ask diner2Patches [
       set pcolor magenta
-      set region "C"
+      set region "diner2"
     ]
-      ask one-of Cpatches [set plabel "C"]
+      ask one-of diner2Patches [set plabel "diner2"]
 
   ; setup prison
   let prisonPatches patches with [pxcor >= -33 and pxcor <= -23 and pycor >= -33 and pycor <= -23]
@@ -92,7 +78,7 @@ to setup
     set shape "police"
     set size 1.5
     set color blue
-    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "A" and region != "B" and region != "C"]
+    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "diner"]
     set target nobody
   ]
 
@@ -102,13 +88,8 @@ to setup
     set shape "person"
     set size 1.5
     set color green
-    setxy random-xcor random-ycor
     ; make sure the agents are not placed in prison already during setup:
-    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "A" and region != "B" and region != "C"]
-    ; setting specific variables for citizen
-    ;set inPrison? false
-    ;set jailtime 0
-    ;set jailsentence 0
+    move-to one-of patches with [not any? turtles-here and region != "prison" and region != "diner"]
     set beliefs []
     set intentions []
 
@@ -118,7 +99,7 @@ to setup
     add-belief create-belief "nearbyCop" "nobody"
     ;print belief-content  get-belief "nearbyCop"
 
-    add-belief create-belief "whereToGo" "A"
+    add-belief create-belief "whereToGo" "diner"
     ;print belief-content  get-belief "whereToGo"
 
     add-belief create-belief "arrested" false
@@ -126,7 +107,9 @@ to setup
 
     add-belief create-belief "jailTime" 0
 
+    add-belief create-belief "state" "reactive"
 
+   ; add-belief create-belief "currentAction" ""
 
     add-belief create-belief "vision" citizen-vision
     ;print belief-content get-belief "vision"
@@ -148,19 +131,25 @@ to go
   ask turtles [
     ; Reactive part based on the type of agent
     if (breed = citizens) [
+      execute-intentions
+      ;update beliefs
       updateBeliefs
 
-        execute-behaviors
-        ;print intention-name get-intention
 
+      ;reactive behavior based on beliefs
+      reactiveBehavior
 
+      ;proactive behavior based on beliefs
+      proactiveBehavior
+
+      ;print intentions
+      ;print arrived
       ;
       ]
     if (breed = cops) [
       cop_behavior
       ]
   ]
-print " "
 
 end
 
@@ -168,46 +157,22 @@ to updateBeliefs
 
   ;cop nearby
   let nearby-police other cops in-radius citizen-vision
-    ifelse (any? nearby-police) [let police create-belief "nearbyCop" min-one-of nearby-police [distance myself]; identify the cop that is nearest
+    ifelse (not coastClear) [let police create-belief "nearbyCop" min-one-of nearby-police [distance myself]; identify the cop that is nearest
     update-belief police
   ][
     let noCop create-belief "nearbyCop" nobody
     update-belief noCop
   ]
   ;served sentence
-  if (belief-content get-belief "jailTime" = 0 and belief-content get-belief "arrested" = true)[
+  if (servedTime)[
     update-belief create-belief "arrested" false
-    update-belief create-belief "whereToGo" "A"
+    update-belief create-belief "whereToGo" "diner"
   ]
-
-
-
-end
-
-to execute-behaviors
-  ifelse (belief-content get-belief "arrested")[
-       add-intention "serve" "true"
-
-  ][
-    ifelse (belief-content get-belief "nearbyCop" != nobody)[
-
-        add-intention "avoidCops" "true"
-
-    ][
-      ifelse (arrived)[
-        ;print "proactive"
-        decideWhereToGoNext
-      ][
-          add-intention "moveTowardsRegion" "true"
-      ]
-    ]
-  ]
-  print intentions
-  execute-intentions
+  ;free to do proactive
 end
 
 to-report servedTime
-ifelse (belief-content get-belief "jailTime" = 0) and (belief-content "arrested" = true) and ([region] of patch-here = "prison") [
+ifelse belief-content get-belief "jailTime" = 0 and belief-content get-belief "arrested" = true [
   report true
 ] [
   report false
@@ -219,21 +184,39 @@ to serve
     let currentJailTime belief-content get-belief "jailTime"
     let newJailTime create-belief "jailTime" (currentJailTime - 1)
     update-belief newJailTime
+    ;print servedTime
   ][
     moveTowardsRegion
-
-
   ]
 
 end
 
-to decideWhereToGoNext
-  ifelse (belief-content get-belief "whereToGo" = "A")[
-    let coin random 2
-    ifelse (coin = 0) [
-      update-belief create-belief "whereToGo" "B"
-    ][update-belief create-belief "whereToGo" "C"]
- ][update-belief create-belief "whereToGo" "A"
+
+to reactiveBehavior
+
+  ifelse(belief-content get-belief "arrested")[
+    if (not intention-exists? ["serve" "servedTime"])[
+      add-intention "serve" "servedTime"
+    ]
+  ][ifelse(belief-content get-belief "nearbyCop" != nobody)[
+      if (not intention-exists? ["avoidCops" "coastClear"])[
+      add-intention "avoidCops" "coastClear"
+    ]
+    ][
+      if (not intention-exists? ["moveTowardsRegion" "arrived"] and not arrived)[
+      add-intention "moveTowardsRegion" "arrived"
+      ]
+    ]
+  ]
+
+end
+
+to ProactiveBehavior
+  ifelse (empty? intentions)[
+    ;free to decide
+    decideWhetherToLeave
+  ][
+    ;too busy right now
   ]
 end
 
@@ -260,7 +243,7 @@ end
 
 to-report coastClear
   let nearby-police other cops in-radius citizen-vision
-  ifelse any? nearby-police [report false][report true]
+  ifelse not any? nearby-police or belief-content get-belief "arrested" [report true][report false]
 end
 
 
@@ -269,9 +252,6 @@ to-report arrived
   [report true]
   [report false]
 end
-
-
-
 
 to cop_behavior
   ; Check if the cop already has a target
@@ -303,6 +283,24 @@ to cop_behavior
     left random 360
     forward cop-speed
   ]
+end
+
+to decideWhetherToLeave
+  ifelse (belief-content get-belief "whereToGo" = "diner")[
+    let coin random 100
+    ;print "coin tossed"
+    ifelse (coin < 1) [
+      update-belief create-belief "whereToGo" "diner2"
+    ][]
+  ][
+    let coin random 100
+    ;print "coin tossed"
+    ifelse (coin < 1) [
+      update-belief create-belief "whereToGo" "diner"
+    ][]
+  ]
+
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -375,7 +373,7 @@ num-citizens
 num-citizens
 1
 100
-1.0
+7.0
 1
 1
 NIL
@@ -390,7 +388,7 @@ num-cops
 num-cops
 1
 100
-5.0
+2.0
 1
 1
 NIL
