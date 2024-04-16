@@ -20,20 +20,13 @@ patches-own [
 ]
 
 citizens-own [
-
   intentions
   beliefs
-
 ]
 
 cops-own [
   target
 ]
-
-globals[
-
-]
-
 
 to setup
   clear-all
@@ -109,7 +102,7 @@ to setup
 
     add-belief create-belief "state" "reactive"
 
-   ; add-belief create-belief "currentAction" ""
+
 
     add-belief create-belief "vision" citizen-vision
     ;print belief-content get-belief "vision"
@@ -142,7 +135,7 @@ to go
       ;proactive behavior based on beliefs
       proactiveBehavior
 
-      ;print intentions
+      print intentions
       ;print arrived
       ;
       ]
@@ -184,6 +177,8 @@ to serve
     let currentJailTime belief-content get-belief "jailTime"
     let newJailTime create-belief "jailTime" (currentJailTime - 1)
     update-belief newJailTime
+    set heading (towards one-of patches with [region = "prison"])
+    forward 0.1
     ;print servedTime
   ][
     moveTowardsRegion
@@ -286,18 +281,24 @@ to cop_behavior
 end
 
 to decideWhetherToLeave
+  ;fsm that  decides next destination or stay
   ifelse (belief-content get-belief "whereToGo" = "diner")[
-    let coin random 100
+    let coin random 200
     ;print "coin tossed"
     ifelse (coin < 1) [
       update-belief create-belief "whereToGo" "diner2"
-    ][]
+    ][
+      set heading (towards one-of patches with [region = "diner"])
+      forward 0.1
+    ]
   ][
-    let coin random 100
+    let coin random 200
     ;print "coin tossed"
     ifelse (coin < 1) [
       update-belief create-belief "whereToGo" "diner"
-    ][]
+    ][
+      set heading (towards one-of patches with [region = "diner2"])
+      forward 0.1]
   ]
 
 
@@ -373,7 +374,7 @@ num-citizens
 num-citizens
 1
 100
-7.0
+1.0
 1
 1
 NIL
@@ -388,7 +389,7 @@ num-cops
 num-cops
 1
 100
-2.0
+1.0
 1
 1
 NIL
@@ -432,8 +433,8 @@ SLIDER
 max-jailterm
 max-jailterm
 1
-100
-100.0
+1000
+500.0
 1
 1
 NIL
