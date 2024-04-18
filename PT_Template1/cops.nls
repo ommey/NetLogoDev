@@ -17,12 +17,6 @@ cops-own [
   ; arrest-troublemakers,looking-for-terrorists, suppress-riots
 ]
 
-
-
-
-
-
-
 to setup-cops
 create-cops num-cops [
     set label who
@@ -36,10 +30,8 @@ create-cops num-cops [
     set intentions []
     set incoming-queue []
   ]
-  
-  
+ 
 end
-
 
 to cop_behavior
   
@@ -52,10 +44,10 @@ to cop_behavior
   
   ;---test purpose
   ;set destinationxy one-of patches with [region = "Restaurant"]
-  set order "rule-of-law"
-  ;set order "arrest-troublemakers"
+  ;set order "rule-of-law"
+  set order "arrest-troublemakers"
 
-    
+  
     
 
   ;################## REACTIVE BEHAVIOR ####################################
@@ -65,7 +57,10 @@ to cop_behavior
    
   (ifelse 
     order = "rule-of-law" [
+      if random 9 > 0 [set suspect nobody set hunted nobody]
       (ifelse
+        suspect != nobody and random 29 = 0 [arrest suspect]    
+        hunted != nobody [catch hunted]
         true [patrolAround])]
     order = "arrest-troublemakers" [
       (ifelse 
@@ -77,24 +72,6 @@ to cop_behavior
   
 end 
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
- 
 
 to patrolAround
   let places neighborhood with [region = "empty" or region = "TownSquare"]
@@ -103,11 +80,11 @@ end
 
 to arrest [suspect]
   ; move the citizen to prison and mark them as arrested
-  if Debug [print (word " cop-agent: " who " puts suspect: " suspect " to prison!")]
-  ask suspect [
-           set jailsentence random max-jailterm
-           gotoprison
-        ]
+    if Debug [print (word " cop-agent: " who " puts suspect: " suspect " to prison!")]
+    ask suspect [
+      set jailsentence random max-jailterm
+      gotoprison
+    ]
 end
 
 to catch [hunted]
