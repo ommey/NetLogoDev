@@ -15,6 +15,8 @@ cops-own [
   cop-speed
   order ; Received order that currently is being carried out. Enumeration = rule-of-law,
   ; arrest-troublemakers,looking-for-terrorists, suppress-riots
+  last-hunted    ;Julia
+  last-suspect ;Julia 
 ]
 
 to setup-cops
@@ -29,6 +31,9 @@ create-cops num-cops [
     set beliefs [] 
     set intentions []
     set incoming-queue []
+    
+    set last-hunted nobody
+    set last-suspect nobody
   ]
  
 end
@@ -56,12 +61,7 @@ to cop_behavior
  
    
   (ifelse 
-    order = "rule-of-law" [
-      if random 9 > 0 [set suspect nobody set hunted nobody]
-      (ifelse
-        suspect != nobody and random 29 = 0 [arrest suspect]    
-        hunted != nobody [catch hunted]
-        true [patrolAround])]
+    order = "rule-of-law" [rule-of-law suspect hunted]
     order = "arrest-troublemakers" [
       (ifelse 
         suspect != nobody [arrest suspect]    
@@ -71,6 +71,20 @@ to cop_behavior
  
   
 end 
+
+to rule-of-law [suspect hunted]
+  
+  if random 9 > 0 [set suspect nobody set hunted nobody]
+  
+  if hunted = last-hunted [set hunted nobody]
+  if suspect = last-suspect [set suspect nobody]
+  
+ (ifelse
+    suspect != nobody and random 29 = 0 [arrest suspect set last-suspect suspect]    
+    hunted != nobody [catch hunted set last-hunted hunted]
+    true [patrolAround])
+end
+  
   
 
 to patrolAround
