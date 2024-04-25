@@ -99,8 +99,8 @@ to citizen_behavior
 ;---- cops nearby, which one is the nearest? How many cops, how many citizens?
 let nearby-police other cops in-radius citizen-vision
 if any? nearby-police [let police min-one-of nearby-police [distance myself]]; identify the cop that is nearest  
-set A count nearby-police
-set C count (other citizens in-radius citizen-vision)
+update-A nearby-police
+update-C
 ; ---- identify a path to escape to if needed
 let hidingplaces neighborhood with [not any? cops-here and region = "empty" or region = "TownSquare"]
 ;--- save local position
@@ -274,4 +274,36 @@ to demonstrate
   if Debug [print (word who " is in the proactive state Demonstration")]
 end
 
-;""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+;""""""""""""""""""""""""""""""""Citizen belief functions"""""""""""""""""""""""""""""""""""""""
+
+to update-A [nearby-police]
+  set A count nearby-police
+end
+
+to update-C
+  set C count (other citizens in-radius citizen-vision)
+end
+
+to decrease-frustration
+ set vfrust vfrust * (1 - exp(- alfaFrust))
+end
+
+to increase-frustration
+  set vfrust vfrust + 1
+end
+
+to update-anger
+  set anger vfrust * (1 - L)
+end
+
+to increase-anger
+  ifelse inPrison? [set anger anger * ( 1 + 0.1 * percAnger)][ set anger anger * ( 1 + percAnger)]
+end
+
+to decrease-anger
+  set anger anger * (1 - 10 * percAnger)
+end
+  
+  
+  
+  
