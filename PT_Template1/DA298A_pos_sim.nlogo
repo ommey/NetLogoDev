@@ -1,332 +1,225 @@
-;reactive behavior: a citizen agent walks to a given destination A.
-;If it encounters cop-agents it tries to escape from being arrested.
-;If it is being arrested it has to move to prison.
+; DIS-PT_chpt6
+; template for the programming task with cops and citizen agents
+;
+; HOW TO WORK WITH THIS FILE:
+;
+; 1. Bransch this file from Github for your group
+; 2. Divide the work from the task to your group members, so that every group member has at least one own task
+; 3. Make individual bransches per group member from the group-bransch that you made under 1.
+; 4. Start with your individual tasks development and make push- and pulls between your individual bransches as needed
+; 5. When the individual tasks are finished you need to merge the different parts back into the original group-bransch
+; 6. Make sure that the final version works before uploading it under PT_chpt6 on Canvas.
+;
+;
 
-;proactive behavior: if the citizen agent arrives at destination A,
-;it has to decide whether to go to destination B or C.
-;It does this by flipping a coin. If the agent finds itself in prison, it
-
-__includes [
-    "bdi.nls"
- ]
 
 
-breed [citizens citizen]  ;
-breed [cops cop] ;
 
-patches-own [
-  neighborhood        ; surrounding patches within the vision radius
-  region              ; used for identification of different regions
+; ************ INCLUDED FILES ****************
+
+; ************ EXTENSIONS *****************
+extensions [
+ vid bitmap; used for recording of the simulation
+]
+; ********************end extensions ********
+
+;****************** INITIAL AND DEFINITIONS PART **********
+;
+;----- Breeds of agents
+breed [baseStations baseStation];
+breed [fireFighters fireFighter];
+
+
+;---- General agent variables
+fireFighters-own [
+  distanceTobasePos1 ; distans till ankarpunkt 1
+  distanceTobasePos2 ; distans till ankarpunkt 2
 ]
 
-citizens-own [
-  intentions
-  beliefs
+baseStations-own [
+  basePos
 ]
 
-cops-own [
-  target
-]
+;---- Specific, local variables of patches
 
+to setup-bases
+  ; Define base points at specific coordinates
+
+  ; Create markers for the base points
+  create-baseStations 2 [
+    set shape "target"
+    set color green
+    set size 10
+
+    if who = 0 [ set basePos (list 10 10) ] ; Place basePos1
+    if who = 1 [ set basePos (list 90 10) ] ; Place basePos2
+
+    setxy item 0 basePos item 1 basePos
+  ]
+end
+
+to setup-fireFighters
+  ; Create the turtle that will measure distances
+  create-firefighters 1 [
+    set color red
+    set size 5
+    setxy random-xcor random-ycor ; Place it randomly
+
+    ; Create links to base stations
+    ask baseStations [
+      create-link-with myself [
+        set color blue
+        set thickness 0.5
+        set label-color white
+      ]
+    ]
+  ]
+end
+
+to-report getDistanceTobase1 [ff]
+  report [distanceToBasePos1] of ff
+end
+
+to-report getDistanceTobase2 [ff]
+  report [distanceToBasePos2] of ff
+end
+
+
+
+to measure-distances
+  ask fireFighters [
+    let base1 one-of baseStations with [who = 0]
+    let base2 one-of baseStations with [who = 1]
+
+    ; Measure distances
+    set distanceTobasePos1 distance base1
+    set distanceToBasePos2 distance base2
+
+    ; Update the link labels
+    ask my-links [
+      if end1 = myself [
+        set label (word "Dist1: " getDistanceTobase1 myself)
+      ]
+      if end2 = myself [
+        set label (word "Dist2: " getDistanceTobase2 myself)
+      ]
+    ]
+  ]
+end
+
+
+to display-distances
+  ; Print distances in the command center
+  show (word "Distance to Base Station 1: " distanceToBasePos1)
+  show (word "Distance to Base Station 2: " distanceToBasePos2)
+end
+
+to move-randomly
+  ; Move in a random direction to simulate wandering
+  right random 100
+  forward 1
+end
+
+to move-in-circle
+  let center-x max-pxcor / 2
+  let center-y max-pycor / 2
+  let radius 10  ; Adjust the radius as needed
+  let angle (ticks * 5)  ; Control the speed of rotation by changing the multiplier
+
+  ; Calculate new x and y coordinates using sine and cosine
+  let new-x center-x + radius * cos angle
+  let new-y center-y + radius * sin angle
+
+  setxy new-x new-y  ; Move the turtle to the new position
+end
+to noors-vals
+  ; Start at the initial position (0, 0)
+
+  ; Define the path as a list of lists of coordinates
+  let path [
+    [0 20]
+    [15 20]
+    [15 30]
+    [35 60]
+    [60 40]
+    [70 40]
+    [100 40]
+    [95 50]
+    [90 90]
+    [50 100]
+    [0 100]
+  ]
+
+  ; Move smoothly along the defined path
+  foreach path [ current-coord ->
+    let x item 0 current-coord  ; Extract the x-coordinate
+    let y item 1 current-coord  ; Extract the y-coordinate
+
+    ; Add a small delay for smooth motion
+  ]
+
+  face
+
+  ; After completing the movement, reset position back to (0, 0)
+  setxy 0 0
+end
+
+
+
+
+
+
+; ######################## SETUP PART ################################
+; setup of the environment, and the different agents
 to setup
   clear-all
-  ; setup of the environment:
-  ; setup of all patches
-
-  ask patches [
-    ; make background a certain color or leave it black
-    set pcolor white - 5
-    ; cache patch neighborhoods
-    set neighborhood patches in-radius citizen-vision
+  setup-bases
+  setup-fireFighters
+  reset-ticks
+  ;recorder
+  if vid:recorder-status = "recording" [
+    if Source = "Only View" [vid:record-view] ; records the plane
+    if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
 
-  ; setup area 'diner'
-  let dinerPatches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= 28 and pycor <= 33 ]
-    ask dinerPatches [
-      set pcolor green - 2
-      set region "diner"
-    ]
-    ask one-of dinerPatches [set plabel "diner"]
-
-  let diner2Patches patches with [ pxcor >= 28 and pxcor <= 33 and pycor >= -33 and pycor <= -28 ]
-    ask diner2Patches [
-      set pcolor magenta
-      set region "diner2"
-    ]
-      ask one-of diner2Patches [set plabel "diner2"]
-
-  ; setup prison
-  let prisonPatches patches with [pxcor >= -33 and pxcor <= -23 and pycor >= -33 and pycor <= -23]
-  ask prisonPatches [
-  set pcolor blue
-  set region "prison"
-  ]
-  ask patch -23 -23 [
-  set plabel "prison"
-  ]
-
-  ;---- setup cops
-  create-cops num-cops [
-    set label who
-    set shape "police"
-    set size 1.5
-    set color blue
-    move-to one-of patches with [ not any? turtles-here and region != "prison" and region != "diner"]
-    set target nobody
-  ]
-
-  ; setup citizen-agents
-  create-citizens num-citizens [
-    set label who
-    set shape "person"
-    set size 1.5
-    set color green
-    ; make sure the agents are not placed in prison already during setup:
-    move-to one-of patches with [not any? turtles-here and region != "prison" and region != "diner"]
-    set beliefs []
-    set intentions []
-
-
-
-
-    add-belief create-belief "nearbyCop" "nobody"
-    ;print belief-content  getbelief "nearbyCop"
-
-    add-belief create-belief "whereToGo" "diner"
-    ;print belief-content  getbelief "whereToGo"
-
-    add-belief create-belief "arrested" false
-    ;print belief-content  getbelief "arrested"
-
-    add-belief create-belief "jailTime" 0
-
-    add-belief create-belief "state" "reactive"
-
-
-
-    add-belief create-belief "vision" citizen-vision
-    ;print belief-content getbelief "vision"
-
-    add-belief create-belief "speed" citizen-speed
-    ;print belief-content  getbelief "speed
-
-
-  ]
-  ; must be last in the setup-part:
-    reset-ticks
 end
 
+; **************************end setup part *******
+
+
+
+; ########################## TO GO/ STARTING PART ########################
+;;
 to go
-  tick ;- update time
+  ask fireFighters [
 
-  ;---- Agents to-go part -------------
-
-  ask turtles [
-    ; Reactive part based on the type of agent
-    if (breed = citizens) [
-      execute-intentions
-      ;update beliefs
-      updateBeliefs
-
-
-      ;reactive behavior based on beliefs
-      reactiveBehavior
-
-      ;proactive behavior based on beliefs
-      proactiveBehavior
-
-      print intentions
-      ;print arrived
-      ;
-      ]
-    if (breed = cops) [
-      cop_behavior
-      ]
+      measure-distances
+      display-distances
+    noors-vals
   ]
 
-end
-
-to updateBeliefs
-
-  ;cop nearby
-  let nearby-police other cops in-radius citizen-vision
-    ifelse (not coastClear) [let police create-belief "nearbyCop" min-one-of nearby-police [distance myself]; identify the cop that is nearest
-    update-belief police
-  ][
-    let noCop create-belief "nearbyCop" nobody
-    update-belief noCop
-  ]
-  ;served sentence
-  if (servedTime)[
-    update-belief create-belief "arrested" false
-    update-belief create-belief "whereToGo" "diner"
-  ]
-  ;free to do proactive
-end
-
-to-report servedTime
-ifelse belief-content getbelief "jailTime" = 0 and belief-content getbelief "arrested" = true [
-  report true
-] [
-  report false
-]
-end
-
-to serve
-  ifelse(arrived)[
-    let currentJailTime belief-content getbelief "jailTime"
-    let newJailTime create-belief "jailTime" (currentJailTime - 1)
-    update-belief newJailTime
-    set heading (towards one-of patches with [region = "prison"])
-    forward 0.1
-    ;print servedTime
-  ][
-    moveTowardsRegion
+  ;recorder
+ if vid:recorder-status = "recording" [
+    if Source = "Only View" [vid:record-view] ; records the plane
+    if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
 
-end
+  tick
+end ; - to go part
 
 
-to reactiveBehavior
 
-  ifelse(belief-content getbelief "arrested")[
-    if (not intention-exists? ["serve" "servedTime"])[
-      add-intention "serve" "servedTime"
-    ]
-  ][ifelse(belief-content getbelief "nearbyCop" != nobody)[
-      if (not intention-exists? ["avoidCops" "coastClear"])[
-      add-intention "avoidCops" "coastClear"
-    ]
-    ][
-      if (not intention-exists? ["moveTowardsRegion" "arrived"] and not arrived)[
-      add-intention "moveTowardsRegion" "arrived"
-      ]
-    ]
-  ]
-
-end
-
-to ProactiveBehavior
-  ifelse (empty? intentions)[
-    ;free to decide
-    decideWhetherToLeave
-  ][
-    ;too busy right now
-  ]
-end
-
-
-to moveTowardsRegion
-  ;print belief-content getbelief "whereToGo"
-  let regionOfDestination  belief-content  getbelief "whereToGo"
-  let target-patch one-of patches with [region = regionOfDestination]
-
-  if target-patch != nobody [
-    face target-patch
-  ]
-  forward citizen-speed
-end
-
-to avoidCops
-  let nearestCop belief-content getbelief "nearbyCop"
-  if is-agent? nearestCop [
-    set heading (towards nearestCop) + 180 ; face opposite from the nearest police  ; face towards the nearest police
-    forward belief-content getbelief "speed"
-    ;print (word " citizen: " who " evaded cop: " nearestCop)
-  ]
-end
-
-to-report coastClear
-  let nearby-police other cops in-radius citizen-vision
-  ifelse not any? nearby-police or belief-content getbelief "arrested" [report true][report false]
-end
-
-
-to-report arrived
-  ifelse [region] of patch-here = belief-content getbelief "whereToGo"
-  [report true]
-  [report false]
-end
-
-to cop_behavior
-  ; Check if the cop already has a target
-  if target = nobody [
-    ; Look for citizens nearby to arrest
-    set target one-of citizens with [belief-content getbelief "arrested" = false] in-radius cop-vision
-  ]
-
-  ; If a target is found, proceed to arrest it
-  ifelse target != nobody [
-    ; Move towards the target and arrest it
-    face target
-    ifelse distance target <= 1 [
-      ; Arrest the target
-      ask target [
-        update-belief create-belief "whereToGo" "prison"
-        let jailterm random max-jailTerm + 1
-        update-belief create-belief "jailTime" jailTerm
-        update-belief create-belief "arrested" true
-      ]
-      ; Reset target after arrest
-      set target nobody
-    ][
-      ; Move forward towards the target
-      forward cop-speed
-    ]
-  ][
-    ; If no target is found, roam randomly
-    left random 360
-    forward cop-speed
-  ]
-end
-
-to decideWhetherToLeave
-  ;fsm that  decides next destination or stay
-  ifelse (belief-content getbelief "whereToGo" = "diner")[
-    let coin random 200
-    ;print "coin tossed"
-    ifelse (coin < 1) [
-      update-belief create-belief "whereToGo" "diner2"
-    ][
-      set heading (towards one-of patches with [region = "diner"])
-      forward 0.1
-    ]
-  ][
-    let coin random 200
-    ;print "coin tossed"
-    ifelse (coin < 1) [
-      update-belief create-belief "whereToGo" "diner"
-    ][
-      set heading (towards one-of patches with [region = "diner2"])
-      forward 0.1]
-  ]
-
-
-end
-
-;;gets belief of type b-type
-to-report getbelief [b-type]
- ifelse exist-beliefs-of-type  b-type
-  [let bel first beliefs-of-type b-type
-   ;remove-belief bel
-   report bel
-  ]
-  [report false]
-end
-
-;;checks if intention exists
-to-report intention-exists? [intent]
-  report member? intent intentions
-end
+; ####################### OBSERVER FUNCTIONS ##############################
+; monitoring functions with plots for number of arrested citizens
 @#$#@#$#@
 GRAPHICS-WINDOW
-212
-14
-687
-490
+549
+10
+1161
+623
 -1
 -1
-6.58
+6.0
 1
 10
 1
@@ -336,74 +229,74 @@ GRAPHICS-WINDOW
 0
 0
 1
--35
-35
--35
-35
+0
+100
+0
+100
 1
 1
 1
 ticks
-120.0
-
-BUTTON
-25
-62
-88
-95
-setup
-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-24
-96
-88
-129
-go
-go
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+200.0
 
 SLIDER
-19
-272
-191
-305
+23
+397
+137
+430
 num-citizens
 num-citizens
 1
-100
-20.0
+150
+4.0
 1
 1
 NIL
 HORIZONTAL
 
-SLIDER
-19
-304
-191
-337
-num-cops
-num-cops
+BUTTON
+22
+24
+85
+57
+setup
+setup
+NIL
 1
-100
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+22
+70
+85
+103
+go
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+23
+437
+136
+470
+num-cops
+num-cops
+0
+150
 5.0
 1
 1
@@ -411,107 +304,109 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-338
-191
-371
+156
+398
+248
+431
 citizen-vision
 citizen-vision
 1
 10
-10.0
+1.0
 0.1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-19
-371
-191
-404
+156
+436
+248
+469
 cop-vision
 cop-vision
 1
 100
-10.5
+1.0
 0.1
 1
 NIL
 HORIZONTAL
 
-SLIDER
-19
-240
-191
-273
-max-jailterm
-max-jailterm
-1
-1000
-500.0
-1
-1
+MONITOR
+124
+503
+244
+548
 NIL
-HORIZONTAL
+vid:recorder-status
+3
+1
+11
+
+CHOOSER
+124
+559
+243
+604
+Source
+Source
+"Only View" "With Interface"
+0
+
+TEXTBOX
+18
+468
+253
+496
+_______________________________________
+11
+0.0
+1
 
 SWITCH
-42
-181
-188
-214
+26
+219
+163
+252
+showPatchLabels
+showPatchLabels
+0
+1
+-1000
+
+SWITCH
+25
+263
+163
+296
 show-intentions
 show-intentions
 1
 1
 -1000
 
-SLIDER
-17
-437
-189
-470
-cop-speed
-cop-speed
-0
-5
-0.6
-0.1
+SWITCH
+26
+307
+163
+340
+show_messages
+show_messages
 1
-NIL
-HORIZONTAL
+1
+-1000
 
-SLIDER
-19
-405
-191
-438
-citizen-speed
-citizen-speed
+SWITCH
+25
+350
+159
+383
+Debug
+Debug
 0
-5
-0.5
-0.1
 1
-NIL
-HORIZONTAL
-
-BUTTON
-123
-132
-186
-165
-go
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -730,6 +625,29 @@ Rectangle -7500403 true true 127 79 172 94
 Polygon -7500403 true true 195 90 240 150 225 180 165 105
 Polygon -7500403 true true 105 90 60 150 75 180 135 105
 
+person police
+false
+0
+Polygon -1 true false 124 91 150 165 178 91
+Polygon -13345367 true false 134 91 149 106 134 181 149 196 164 181 149 106 164 91
+Polygon -13345367 true false 180 195 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285
+Polygon -13345367 true false 120 90 105 90 60 195 90 210 116 158 120 195 180 195 184 158 210 210 240 195 195 90 180 90 165 105 150 165 135 105 120 90
+Rectangle -7500403 true true 123 76 176 92
+Circle -7500403 true true 110 5 80
+Polygon -13345367 true false 150 26 110 41 97 29 137 -1 158 6 185 0 201 6 196 23 204 34 180 33
+Line -13345367 false 121 90 194 90
+Line -16777216 false 148 143 150 196
+Rectangle -16777216 true false 116 186 182 198
+Rectangle -16777216 true false 109 183 124 227
+Rectangle -16777216 true false 176 183 195 205
+Circle -1 true false 152 143 9
+Circle -1 true false 152 166 9
+Polygon -1184463 true false 172 112 191 112 185 133 179 133
+Polygon -1184463 true false 175 6 194 6 189 21 180 21
+Line -1184463 false 149 24 197 24
+Rectangle -16777216 true false 101 177 122 187
+Rectangle -16777216 true false 179 164 183 186
+
 plant
 false
 0
@@ -741,25 +659,6 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
-
-police
-false
-0
-Circle -7500403 true true 110 5 80
-Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
-Rectangle -7500403 true true 127 79 172 94
-Polygon -7500403 true true 195 90 240 150 225 180 165 105
-Polygon -7500403 true true 105 90 60 150 75 180 135 105
-Rectangle -13791810 true false 105 15 195 45
-Rectangle -13791810 true false 120 0 180 15
-Circle -1184463 true false 135 15 0
-Circle -1184463 true false 135 15 30
-Rectangle -13791810 true false 120 90 180 195
-Line -13791810 false 105 90 120 90
-Polygon -13791810 true false 105 90 120 195 120 90 105 90 105 90 105 90 120 195 120 120
-Polygon -7500403 true true 180 90 195 90 180 120 180 90 195 90 180 120
-Polygon -13791810 true false 180 120 195 90 180 90 180 120
-Polygon -13791810 true false 165 255 195 255 180 195 120 195 105 255 150 255 150 225 150 255 165 255
 
 sheep
 false
